@@ -1,61 +1,16 @@
-The biggest thing this assignment taught me is that a Streamlit script doesn't
-run once — it reruns from the top on every interaction: a keystroke, a file
-upload, a button click. In one_package.py that mattered less, since the only
-state that exists is the current return value of st.text_input, and the guard
-(if package_data:) is enough to keep the script from crashing on the first
-rerun when the text box is still empty. But process_files.py is where the
-rerun model actually bites. If I had written files_processed = 0 at the top of
-the script the way I would in a normal Python program, that line would execute
-again on every single rerun, and the count would never get past 1 no matter
-how many files I processed — the variable isn't remembering anything, it's
-being reset. The fix was moving that state into st.session_state and
-initialising it only once, inside an `if "files_processed" not in
-st.session_state:` guard, so the counters and history list only get created on
-the very first run of the session and are just read and updated on every run
-after that.
-
-The second trap in process_files.py was subtler: st.file_uploader keeps
-returning the same file on every rerun once one has been chosen, not just on
-the rerun where it was picked. If I had processed "whenever there is a file
-present" the same file would get counted again every time anything else on
-the page changed — typing in an unrelated widget, for instance — because that
-also triggers a full rerun. The fix was gating the actual work behind
-st.button("Process file", key="process"), whose return value is True only on
-the one rerun that the click itself caused. On every other rerun it goes back
-to False, even with the same file still sitting in the uploader. So the
-combined guard is `if clicked and uploaded_file:` — both a widget's return
-value and a piece of session state have to line up before anything is written.
-
-process_file.py taught me the bytes-vs-text distinction. st.file_uploader
-hands back a file-like object whose .getvalue() is bytes, not a string,
-because Streamlit has no way to know if the upload is a text file or an
-image. I had to explicitly .decode("utf-8") it before I could call
-.splitlines() on it. I also had to handle blank lines — not just the trailing
-one caused by the file ending in a newline, but one that showed up in the
-middle of a test file too — by stripping each line and skipping it with
-`if not line: continue` before ever calling parse_packaging, since an empty
-string raises a ValueError there.
-
-If I were extending this, the next thing I'd add is a try/except ValueError
-around each parse_packaging call in process_file.py and process_files.py, so
-one malformed line in an uploaded file shows an st.error message for that
-line instead of taking down the whole page with a traceback — right now a bad
-line anywhere in the file kills the entire upload instead of just skipping
-it.
-
-Overall this assignment made the Streamlit rerun model concrete for me in a way
-that reading about it hadn't: I can now point to the exact line in
-process_files.py where a plain variable would have failed, and explain why
-st.session_state fixes it, rather than just repeating the rule. I also learned
-to read return values as the interface to a widget — st.text_input,
-st.file_uploader, and st.button all hand back a value on every single rerun,
-and the app's entire logic is just guards and comparisons against those
-values. Next time I would build error handling in from the start rather than
-as an afterthought: wrapping each parse_packaging call in a try/except
-ValueError and showing st.error for the specific bad line, instead of letting
-one malformed line take down the whole page with a traceback. I'd also want
-more practice with session state beyond a simple counter — for example
-letting a user undo or edit an entry in the history list, which would mean
-mutating a list inside session_state rather than just appending to it, and
-thinking through what should and shouldn't survive a rerun in a more complex
-app.
+Honestly, the part that tripped me up the most was process_files.py, and it
+wasn't the parsing. It was figuring out why my first instinct (just process
+the file whenever one's uploaded) was wrong. I kept staring at it thinking
+"but the file IS there, why would it recount it," until I actually traced
+through what happens on a rerun: the uploader just keeps handing back the
+same file over and over, forever, until someone uploads a different one. The
+button was the piece I was missing. It's only True on the exact rerun where
+it got clicked, and false every other time, which is what actually stops the
+double-counting. Once that clicked (no pun intended) it made a lot of the
+"why session state" stuff from class make more sense too, since I'd been
+treating st.session_state as just a place to stash a number, not as the thing
+that separates "this survives a rerun" from "this doesn't." I feel solid on
+the simple counter version of this. I'd be lying if I said I'd get it right
+on the first try in something more complicated, like an app where you can
+edit or delete a past entry. That's the part I'd actually want to sit down
+and practice next.
