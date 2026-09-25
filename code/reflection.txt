@@ -42,3 +42,20 @@ one malformed line in an uploaded file shows an st.error message for that
 line instead of taking down the whole page with a traceback — right now a bad
 line anywhere in the file kills the entire upload instead of just skipping
 it.
+
+Overall this assignment made the Streamlit rerun model concrete for me in a way
+that reading about it hadn't: I can now point to the exact line in
+process_files.py where a plain variable would have failed, and explain why
+st.session_state fixes it, rather than just repeating the rule. I also learned
+to read return values as the interface to a widget — st.text_input,
+st.file_uploader, and st.button all hand back a value on every single rerun,
+and the app's entire logic is just guards and comparisons against those
+values. Next time I would build error handling in from the start rather than
+as an afterthought: wrapping each parse_packaging call in a try/except
+ValueError and showing st.error for the specific bad line, instead of letting
+one malformed line take down the whole page with a traceback. I'd also want
+more practice with session state beyond a simple counter — for example
+letting a user undo or edit an entry in the history list, which would mean
+mutating a list inside session_state rather than just appending to it, and
+thinking through what should and shouldn't survive a rerun in a more complex
+app.
