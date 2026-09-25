@@ -1,6 +1,18 @@
-Write your reflection here.
+The biggest thing this assignment taught me is that a Streamlit script doesn't
+run once — it reruns from the top on every interaction: a keystroke, a file
+upload, a button click. In one_package.py that mattered less, since the only
+state that exists is the current return value of st.text_input, and the guard
+(if package_data:) is enough to keep the script from crashing on the first
+rerun when the text box is still empty. But process_files.py is where the
+rerun model actually bites. If I had written files_processed = 0 at the top of
+the script the way I would in a normal Python program, that line would execute
+again on every single rerun, and the count would never get past 1 no matter
+how many files I processed — the variable isn't remembering anything, it's
+being reset. The fix was moving that state into st.session_state and
+initialising it only once, inside an `if "files_processed" not in
+st.session_state:` guard, so the counters and history list only get created on
+the very first run of the session and are just read and updated on every run
+after that.
 
-See reflection.md for what makes a good reflection — be specific, use the
-terminology from this assignment (rerun, widget, return value, guard, bytes vs.
-text, decode, session state, initialise once, button-triggered, metric), and make
-it actionable.
+The second trap in process_files.py was subtler: st.file_uploader keeps
+returning the same file on every rerun once one has

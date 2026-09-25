@@ -14,41 +14,40 @@ Run it:  Run and Debug -> "Streamlit Run: Current File"   (see README Reference 
 Test it: pytest tests/test_streamlit.py -k process_file
 """
 
+import json
+
+import streamlit as st
+
+from packaging_parser import parse_packaging, calc_total_units, get_unit
+
 # --- The page ---------------------------------------------------------------------
-#
-# Less scaffolding this time. The steps are described, but which widget and which
-# function does each job — and what to call the result — is now yours to work out.
-# `one_package.py` is your worked example for anything structural, and README
-# Reference #4 and #5 cover the two things that are new here.
 
-# TODO: imports — streamlit, json, and what you need from packaging_parser.
+st.title("Process File of Packages")
 
+uploaded_file = st.file_uploader("Upload package file:", key="package_file")
 
-# TODO: the title, exactly:   Process File of Packages
+if uploaded_file:
 
+    # 1. Bytes to text.
+    text = uploaded_file.getvalue().decode("utf-8")
+    lines = text.splitlines()
 
-# TODO: a file uploader, key="package_file". Like the text box in Part 1 it returns
-#       a value — None until a file has been chosen — so the same kind of guard
-#       goes around everything below.
+    # 2. Every line: strip, skip blanks, parse, keep, show.
+    packages = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        package = parse_packaging(line)
+        packages.append(package)
+        total = calc_total_units(package)
+        unit = get_unit(package)
+        st.info(f"{line} ➡️ Total 📦 Size: {total} {unit}")
 
+    # 3. Write the JSON.
+    output_name = "data/" + uploaded_file.name.replace(".txt", ".json")
+    with open(output_name, "w") as json_file:
+        json.dump(packages, json_file, indent=4)
 
-# 1. Bytes to text. The upload is bytes; decode it, then split it into lines.
-# TODO
-
-
-# 2. Every line: strip it, SKIP IT IF IT IS BLANK, parse it, keep the parsed package
-#    in a list, and show the line with its total. Match this layout:
-#
-#        12 eggs in 1 carton / 3 cartons in 1 box ➡️ Total 📦 Size: 36 eggs
-# TODO
-
-
-# 3. Write the list of parsed packages to data/<name>.json with json.dump, where
-#    <name> is the uploaded file's name with .txt replaced by .json.
-# TODO
-
-
-# 4. Say what happened, exactly:
-#
-#        3 packages written to data/packaging1.json
-# TODO
+    # 4. Say what happened.
+    st.success(f"{len(packages)} packages written to {output_name}")
