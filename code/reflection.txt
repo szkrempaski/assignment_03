@@ -1,16 +1,12 @@
-Honestly, the part that tripped me up the most was process_files.py, and it
-wasn't the parsing. It was figuring out why my first instinct (just process
-the file whenever one's uploaded) was wrong. I kept staring at it thinking
-"but the file IS there, why would it recount it," until I actually traced
-through what happens on a rerun: the uploader just keeps handing back the
-same file over and over, forever, until someone uploads a different one. The
-button was the piece I was missing. It's only True on the exact rerun where
-it got clicked, and false every other time, which is what actually stops the
-double-counting. Once that clicked (no pun intended) it made a lot of the
-"why session state" stuff from class make more sense too, since I'd been
-treating st.session_state as just a place to stash a number, not as the thing
-that separates "this survives a rerun" from "this doesn't." I feel solid on
-the simple counter version of this. I'd be lying if I said I'd get it right
-on the first try in something more complicated, like an app where you can
-edit or delete a past entry. That's the part I'd actually want to sit down
-and practice next.
+This assignment taught me that Streamlit's rerun model changes how you have to
+think about state entirely. My first version of process_files.py reset its
+counter to zero on every rerun because I treated it like a normal Python
+variable, and I only fixed it once I understood that anything meant to
+survive a rerun has to live in st.session_state and get initialized just once,
+not every time the script runs top to bottom. The trickier bug was realizing
+that st.file_uploader keeps returning the same file on every rerun, so I had
+to gate the actual processing behind a button click instead of just checking
+whether a file was present. Going forward, I'd like more practice with more
+complex session state, like letting a user edit or remove a past entry
+instead of just appending to a list, since that's where I'm least confident
+I'd get the guard logic right on the first try.
