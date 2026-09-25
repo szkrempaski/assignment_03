@@ -15,4 +15,30 @@ the very first run of the session and are just read and updated on every run
 after that.
 
 The second trap in process_files.py was subtler: st.file_uploader keeps
-returning the same file on every rerun once one has
+returning the same file on every rerun once one has been chosen, not just on
+the rerun where it was picked. If I had processed "whenever there is a file
+present" the same file would get counted again every time anything else on
+the page changed — typing in an unrelated widget, for instance — because that
+also triggers a full rerun. The fix was gating the actual work behind
+st.button("Process file", key="process"), whose return value is True only on
+the one rerun that the click itself caused. On every other rerun it goes back
+to False, even with the same file still sitting in the uploader. So the
+combined guard is `if clicked and uploaded_file:` — both a widget's return
+value and a piece of session state have to line up before anything is written.
+
+process_file.py taught me the bytes-vs-text distinction. st.file_uploader
+hands back a file-like object whose .getvalue() is bytes, not a string,
+because Streamlit has no way to know if the upload is a text file or an
+image. I had to explicitly .decode("utf-8") it before I could call
+.splitlines() on it. I also had to handle blank lines — not just the trailing
+one caused by the file ending in a newline, but one that showed up in the
+middle of a test file too — by stripping each line and skipping it with
+`if not line: continue` before ever calling parse_packaging, since an empty
+string raises a ValueError there.
+
+If I were extending this, the next thing I'd add is a try/except ValueError
+around each parse_packaging call in process_file.py and process_files.py, so
+one malformed line in an uploaded file shows an st.error message for that
+line instead of taking down the whole page with a traceback — right now a bad
+line anywhere in the file kills the entire upload instead of just skipping
+it.
